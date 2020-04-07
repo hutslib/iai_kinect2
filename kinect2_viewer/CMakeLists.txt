@@ -76,7 +76,13 @@ target_link_libraries(kinect2_viewer
   ${PCL_LIBRARIES}
   ${kinect2_bridge_LIBRARIES}
 )
-
+add_executable(save_seq src/save_seq.cpp)
+target_link_libraries(save_seq
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  ${PCL_LIBRARIES}
+  ${kinect2_bridge_LIBRARIES}
+)
 #############
 ## Install ##
 #############
