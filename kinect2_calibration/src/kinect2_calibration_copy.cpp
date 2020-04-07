@@ -1345,8 +1345,8 @@ int main(int argc, char **argv)
       ns = arg;
     }
   }
-// 更改使标定时采用的彩色图像是sd(960*540)
-  std::string topicColor = "/" + ns + K2_TOPIC_QHD + K2_TOPIC_IMAGE_MONO;
+
+  std::string topicColor = "/" + ns + K2_TOPIC_HD + K2_TOPIC_IMAGE_MONO;
   std::string topicIr = "/" + ns + K2_TOPIC_SD + K2_TOPIC_IMAGE_IR;
   std::string topicDepth = "/" + ns + K2_TOPIC_SD + K2_TOPIC_IMAGE_DEPTH;
   OUT_INFO("Start settings:" << std::endl
