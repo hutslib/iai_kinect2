@@ -14,7 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+// -------------------------------------------
+//  @description: 更改保存路径
+//  @author: hts
+//  @data: 2020-04-10
+//  @version: change write paths
+// -------------------------------------------
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
@@ -483,8 +488,11 @@ private:
   void saveCloudAndImages(const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr cloud, const cv::Mat &color, const cv::Mat &depth, const cv::Mat &depthColored)
   {
     oss.str("");
-    oss << "./" << std::setfill('0') << std::setw(4) << frame;
-     // 所有文件都保存在当前路径下
+    // oss << "./" << std::setfill('0') << std::setw(4) << frame;
+     // 所有文件都保存在kinect_pic文件夹里面
+    //  change write paths
+    oss << "/home/hts/kinect_pic_1/" << std::setfill('0') << std::setw(4) << frame;
+
     const std::string baseName = oss.str();
     const std::string cloudName = baseName + "_cloud.pcd";
     const std::string colorName = baseName + "_color.jpg";
