@@ -406,6 +406,7 @@ private:
     for(size_t i = 0; i < 9; ++i, ++itC)
     {
       *itC = cameraInfo->K[i];
+      // cout<<*itC<<endl;
     }
   }
 
@@ -457,7 +458,9 @@ private:
     #pragma omp parallel for
     for(int r = 0; r < depth.rows; ++r)
     {
+      // 创建点云row行，每一行有col列
       pcl::PointXYZRGBA *itP = &cloud->points[r * depth.cols];
+      // ptr函数访问任意一行像素的首地址　
       const uint16_t *itD = depth.ptr<uint16_t>(r);
       const cv::Vec3b *itC = color.ptr<cv::Vec3b>(r);
       const float y = lookupY.at<float>(0, r);
@@ -514,11 +517,19 @@ private:
 
   void createLookup(size_t width, size_t height)
   {
+    // width是列->x　height是行->y
+    // 得到相机的内参数
+    //  成像模型
+// [u       [ fx　0 cx   [x
+//  v  = 1/z  0  fy cy    y
+//  1]        0   0  1]   z]
+// 求逆矩阵　得到像极坐标系中的坐标　
     const float fx = 1.0f / cameraMatrixColor.at<double>(0, 0);
     const float fy = 1.0f / cameraMatrixColor.at<double>(1, 1);
     const float cx = cameraMatrixColor.at<double>(0, 2);
     const float cy = cameraMatrixColor.at<double>(1, 2);
     float *it;
+    cout<<fx<<" "<<fy<<" "<<cx<<" "<<cy<<" "<<endl;
 
     lookupY = cv::Mat(1, height, CV_32F);
     it = lookupY.ptr<float>();

@@ -469,6 +469,7 @@ private:
   {
     oss.str("");
     oss << "./" << std::setfill('0') << std::setw(4) << frame;
+     // 所有文件都保存在当前路径下
     const std::string baseName = oss.str();
     const std::string cloudName = baseName + "_cloud.pcd";
     const std::string colorName = baseName + "_color.jpg";
@@ -476,6 +477,7 @@ private:
     const std::string depthColoredName = baseName + "_depth_colored.png";
 
     OUT_INFO("saving cloud: " << cloudName);
+     // writer是该类的pcl::PCDWriter类型的成员变量
     writer.writeBinary(cloudName, *cloud);
     OUT_INFO("saving color: " << colorName);
     cv::imwrite(colorName, color, params);
@@ -608,9 +610,11 @@ int main(int argc, char **argv)
   topicDepth = "/" + ns + topicDepth;
   OUT_INFO("topic color: " FG_CYAN << topicColor << NO_COLOR);
   OUT_INFO("topic depth: " FG_CYAN << topicDepth << NO_COLOR);
-
+// Receiver是一个类, 也定义在该文件中.useExact(true), useCompressed(false)
   Receiver receiver(topicColor, topicDepth, useExact, useCompressed);
-
+  // 运行时给出参数"cloud", 则mode = Receiver::CLOUD
+  // 运行时给出参数"image", 则mode = Receiver::IMAGE
+  // 运行时给出参数"both", 则mode = Receiver::BOTH
   OUT_INFO("starting receiver...");
   receiver.run(mode);
 

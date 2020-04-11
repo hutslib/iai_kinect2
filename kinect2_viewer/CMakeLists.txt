@@ -83,6 +83,13 @@ target_link_libraries(save_seq
   ${PCL_LIBRARIES}
   ${kinect2_bridge_LIBRARIES}
 )
+add_executable(getpoint src/getpoint.cpp)
+target_link_libraries(getpoint
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  ${PCL_LIBRARIES}
+  ${kinect2_bridge_LIBRARIES}
+)
 #############
 ## Install ##
 #############
