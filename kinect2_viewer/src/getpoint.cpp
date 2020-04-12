@@ -48,8 +48,9 @@ private:
   cv::Mat lookupX, lookupY;
   pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud;
   pcl::PCDWriter writer;
+  bool visualize_stop;
 public:
-  Posepoint()
+  Posepoint():visualize_stop(false)
   {
     cameraMatrixColor = cv::Mat::zeros(3, 3, CV_64F);
     // cameraMatrixDepth = cv::Mat::zeros(3, 3, CV_64F);
@@ -61,11 +62,11 @@ public:
     void start(std::string color_path, std::string depth_path)
   {
     color = cv::imread(color_path);
-    depth = cv::imread(depth_path);
+    depth = cv::imread(depth_path,2);
     // cv::imshow("color", color);
     // cv::imshow("depth", depth);
     // cv::waitKey(0);
-        cloud = pcl::PointCloud<pcl::PointXYZRGBA>::Ptr(new pcl::PointCloud<pcl::PointXYZRGBA>());
+    cloud = pcl::PointCloud<pcl::PointXYZRGBA>::Ptr(new pcl::PointCloud<pcl::PointXYZRGBA>());
     cloud->height = color.rows;
     cloud->width = color.cols;
     cloud->is_dense = false;
@@ -146,7 +147,7 @@ public:
     // 设置XYZ三个坐标轴的大小和长度，该值也可以缺省
     // 查看复杂的点云图像会让用户没有方向感，为了让用户保持正确的方向判断，需要显示坐标轴。三个坐标轴X（R，红色）
     // Y（G，绿色）Z（B，蓝色）分别用三种不同颜色的圆柱体代替
-    visualizer->addCoordinateSystem(1.0);
+    // visualizer->addCoordinateSystem(1.0);
     // 通过设置相机参数是用户从默认的角度和方向观察点
     visualizer->initCameraParameters();
     // 设置窗口viewer的背景颜色
@@ -156,10 +157,10 @@ public:
     visualizer->setSize(color.cols, color.rows);
     visualizer->setShowFPS(true);
     visualizer->setCameraPosition(0, 0, 0, 0, -1, 0);
-    // visualizer->registerKeyboardCallback(&Posepoint::keyboardEvent, *this);
+    visualizer->registerKeyboardCallback(&Posepoint::keyboardEvent, *this);
     saveCloud(cloud);
-    // visualizer->spinOnce();
-    while (!visualizer->wasStopped()) {
+    // visualizer->spinOnce(300);
+    while (!visualize_stop) {
         visualizer->spinOnce(100);
         // boost::this_thread::sleep(boost::posix_time::microseconds(1000));
     }
@@ -172,6 +173,10 @@ public:
     // cv::imshow("color", color);
     // cv::imshow("depth", depth);
     // cv::waitKey(0);
+    cout<<depth.rows<<"   "<<depth.cols<<endl;
+    cout<<color.rows<<"   "<<color.cols<<endl;
+    FILE *fp = NULL;
+    fp = fopen("/tmp/test2.txt", "a");
     #pragma omp parallel for
     for(int r = 0; r < depth.rows; ++r)
     {
@@ -203,6 +208,7 @@ public:
         itP->g = itC->val[1];
         itP->r = itC->val[2];
         itP->a = 255;
+        fprintf(fp, "%f\n", depthValue);
         // cout<<depthValue<<"   "<<endl;
         // cout<<itP->x<<"   "<<itP->y<<"   "<<itP->z<<"  "<<double(itP->b)<<"   "<<double(itP->g)<<"   "<<double(itP->b)<<"  "<<endl;
       }
@@ -218,6 +224,19 @@ public:
     OUT_INFO("saving cloud: " << cloudName);
      // writer是该类的pcl::PCDWriter类型的成员变量
     writer.writeBinary(cloudName, *cloud);
+  }
+    void keyboardEvent(const pcl::visualization::KeyboardEvent &event, void *)
+  {
+    if(event.keyUp())
+    {
+      switch(event.getKeyCode())
+      {
+      case 27:
+      case 'q':
+        visualize_stop = true;
+        break;
+      }
+    }
   }
 };
 
