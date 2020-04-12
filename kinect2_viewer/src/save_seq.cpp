@@ -20,6 +20,12 @@
 //  @data: 2020-04-10
 //  @version: change write paths
 // -------------------------------------------
+// -------------------------------------------
+//  @description: 更改深度图的保存为无损
+//  @author: hts
+//  @data: 2020-04-12
+//  @version: wpdwp
+// -------------------------------------------
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
@@ -30,6 +36,7 @@
 #include <mutex>
 #include <thread>
 #include <chrono>
+#include<fstream>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -114,9 +121,13 @@ public:
     params.push_back(cv::IMWRITE_JPEG_QUALITY);
     params.push_back(100);
     params.push_back(cv::IMWRITE_PNG_COMPRESSION);
-    params.push_back(1);
+    // params.push_back(1);
+    // wpdwp
+    params.push_back(0);
     params.push_back(cv::IMWRITE_PNG_STRATEGY);
-    params.push_back(cv::IMWRITE_PNG_STRATEGY_RLE);
+    // params.push_back(cv::IMWRITE_PNG_STRATEGY_RLE);
+    //wpdwp 
+    params.push_back(cv::IMWRITE_PNG_STRATEGY_DEFAULT);
     params.push_back(0);
   }
 
@@ -454,7 +465,13 @@ private:
   void createCloud(const cv::Mat &depth, const cv::Mat &color, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr &cloud) const
   {
     const float badPoint = std::numeric_limits<float>::quiet_NaN();
-
+    FILE *fp = NULL;
+    fp = fopen("/tmp/test.txt", "a");
+    if (save)
+    {
+      cout<<depth.rows<<"   "<<depth.cols<<endl;
+      cout<<color.rows<<"   "<<color.cols<<endl;
+    }
     #pragma omp parallel for
     for(int r = 0; r < depth.rows; ++r)
     {
@@ -484,8 +501,15 @@ private:
         itP->g = itC->val[1];
         itP->r = itC->val[2];
         itP->a = 255;
+        if(save)
+        {
+          fprintf(fp, "%f\n", depthValue);
+          // cout<<depthValue<<endl;
+        }
+
       }
     }
+    fclose(fp);
   }
 
   void saveCloudAndImages(const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr cloud, const cv::Mat &color, const cv::Mat &depth, const cv::Mat &depthColored)
