@@ -38,6 +38,11 @@
 #include <message_filters/sync_policies/approximate_time.h>
 
 #include <kinect2_bridge/kinect2_definitions.h>
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
+using namespace Eigen;
+
+#define pi 3.14159265359
 
 class Posepoint
 {
@@ -50,16 +55,15 @@ private:
   pcl::PCDWriter writer;
   bool visualize_stop;
   double pick_points[6];
+  Vector3f Lshoulder, Rshoulder, Pelv;  
 public:
   Posepoint():visualize_stop(false)
   {
     cameraMatrixColor = cv::Mat::zeros(3, 3, CV_64F);
-    static double my_points[6] = {236.0807342529297, 242.84010314941406,286.8062438964844, 168.4427032470703,351.0585021972656, 209.02308654785156};
-
+    static double my_points[6] = {255.67636108398438,292.16888427734375,320.4430236816406,266.26220703125,330.15802001953125,298.64556884765625};
     for(int i=0; i<6; i++)
     {
       pick_points[i] = my_points[i];
-      // cout<<pick_points[i]<<endl;
     }
   }
   ~Posepoint()
@@ -164,17 +168,12 @@ public:
 
     visualizer->close();
   }
-    void createCloud(const cv::Mat &depth, const cv::Mat &color, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr &cloud) const
+    void createCloud(const cv::Mat &depth, const cv::Mat &color, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr &cloud)
   {
+    int body_part;
     const float badPoint = std::numeric_limits<float>::quiet_NaN();
-    FILE *fp = NULL;
-    fp = fopen("/home/hts/catkin_ws/test.txt", "a");
-    // cout<<depth.rows<<"   "<<depth.cols<<endl;
-    // cout<<color.rows<<"   "<<color.cols<<endl;
-    //   for(int i = 0; i<3; i++)
-    // {
-    //   cout<<pick_points[i*2]<<"  "<<pick_points[i*2+1]<<endl;
-    // }
+    // FILE *fp = NULL;
+    // fp = fopen("/home/hts/catkin_ws/test.txt", "a");
     #pragma omp parallel for
     for(int r = 0; r < depth.rows; ++r)
     {
@@ -189,17 +188,31 @@ public:
       for(size_t c = 0; c < (size_t)depth.cols; ++c, ++itP, ++itD, ++itC, ++itX)
       {
         bool picked = false;
-        for (int i = 0; i < 3; i++)
+          if(int(pick_points[0]) == r && size_t(pick_points[1]) == c)
         {
-          // cout<<size_t(pick_points[i*2])<<"  "<<size_t(pick_points[i*2+1])<<endl;
-          if(int(pick_points[i*2]) == r && size_t(pick_points[i*2+1]) == c)
-          {
-            cout<<r<<"   "<<c<<"pick_succ"<<endl;
+            // cout<<r<<"   "<<c<<"Pelv_succ"<<endl;
+            // cout<<"Pelv"<<endl;
             picked = true;
-          }
+            body_part = 0;        
+        }
+          if(int(pick_points[2]) == r && size_t(pick_points[3]) == c)
+        {
+            // cout<<r<<"   "<<c<<"Rshoulder_succ"<<endl;
+            // cout<<"Rshoulder"<<endl;
+            picked = true;
+            body_part = 1;        
+        }
+          if(int(pick_points[4]) == r && size_t(pick_points[5]) == c)
+        {
+            // cout<<r<<"   "<<c<<"LShoulder_succ"<<endl;
+            // cout<<"Lshoulder"<<endl;
+            picked = true;
+            body_part = 2;        
         }
         if (picked)
         {
+          // cout<<"picked"<<endl;
+          // cout<<body_part<<endl;
           register const float depthValue = *itD / 1000.0f;
           // Check for invalid measurements
           if(*itD == 0)
@@ -216,7 +229,25 @@ public:
           itP->g = itC->val[1];
           itP->r = itC->val[2];
           itP->a = 255;
-          fprintf(fp, "%f,%f,%f,%d,%d,%d,%d\n", itP->z,itP->x,itP->y,itP->b,itP->g,itP->r,itP->a);
+          // fprintf(fp, "%f,%f,%f,%d,%d,%d,%d\n", itP->z,itP->x,itP->y,itP->b,itP->g,itP->r,itP->a);
+          switch(body_part)
+          {
+          case 0:;
+                Lshoulder(0) = itP->x; Lshoulder(1) = itP->y; Lshoulder(2) = itP->z;
+                // cout<<"Pelv"<<endl;
+                // cout<<"Pelv"<<"  "<<Lshoulder(0)<<" "<<Lshoulder(1)<<" "<<Lshoulder(2)<<endl;
+                break;
+          case 1:
+                Rshoulder(0) = itP->x; Rshoulder(1) = itP->y; Rshoulder(2) = itP->z;
+                // cout<<"Rshoulder"<<endl;
+                // cout<<"Rshoulder"<<"  "<<Rshoulder(0)<<" "<<Rshoulder(1)<<" "<<Rshoulder(2)<<endl;
+                break;
+          case 2:
+                Pelv(0) = itP->x; Pelv(1) = itP->y; Pelv(2) = itP->z;
+                // cout<<"Lshoulder"<<endl;
+                // cout<<"Lshoulder"<<"  "<<Pelv(0)<<" "<<Pelv(1)<<" "<<Pelv(2)<<endl;
+                break; 
+          }
         }
         else
         {
@@ -227,7 +258,7 @@ public:
         
       }
     }
-    fclose(fp);
+    // fclose(fp);
   }
     void saveCloud(const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr cloud)
   {
@@ -253,6 +284,25 @@ public:
       }
     }
   }
+  //叉积
+  Vector3f ThreeCross()
+  {
+    Vector3f a, b,result;
+    a=Lshoulder-Pelv;
+    b=Rshoulder-Pelv;
+    cout<<a<<"  "<<b<<endl;
+    result = a.cross(b);
+    cout<<result<<endl;
+    // Eigen::Vector3d v3(0, 0, 0);
+	  // v3.x() = 1;
+	  // v3[2] = 1;
+	  AngleAxisd angle_axis3(pi *11/ 18, Eigen::Vector3d(1, 0, 0));//1系绕y轴逆时针旋转45得到2系
+    // angle_axis3.matrix().cast<float>()
+	  Vector3f rotated_result = angle_axis3.matrix().inverse().cast<float>()*result;
+	  cout << "绕y轴顺时针旋转110°(R12):" << endl << angle_axis3.matrix() << endl;//注意和绕x轴z轴不一样
+	  cout << "旋转后:" << endl << rotated_result.transpose() << endl;
+    return result;
+  }
 };
 int main(int argc, char**argv)
 {
@@ -260,4 +310,9 @@ int main(int argc, char**argv)
   std::string depth_path = argv[2];
   Posepoint posepoint; 
   posepoint.start(color_path, depth_path);
+  posepoint.ThreeCross();
+
+  // Vector3f Lshoulder;
+  // Lshoulder<<0,0,0;
+  // Lshoulder(0)=1;
 }

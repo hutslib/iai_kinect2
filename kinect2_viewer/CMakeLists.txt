@@ -25,6 +25,7 @@ find_package(catkin REQUIRED COMPONENTS roscpp rostime std_msgs sensor_msgs mess
 find_package(OpenCV REQUIRED)
 find_package(OpenMP)
 find_package(PCL REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 if(OPENMP_FOUND)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -67,6 +68,7 @@ include_directories(include
   ${OpenCV_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${kinect2_bridge_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
 )
 
 add_executable(kinect2_viewer src/viewer.cpp)
@@ -85,6 +87,13 @@ target_link_libraries(save_seq
 )
 add_executable(getpoint src/getpoint.cpp)
 target_link_libraries(getpoint
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  ${PCL_LIBRARIES}
+  ${kinect2_bridge_LIBRARIES}
+)
+add_executable(pointcloud src/pointcloud.cpp)
+target_link_libraries(pointcloud
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${PCL_LIBRARIES}
