@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "dense": "cpp",
+        "geometry": "cpp",
+        "functional": "cpp",
+        "core": "cpp",
+        "ostream": "cpp",
+        "iostream": "cpp"
+    }
+}

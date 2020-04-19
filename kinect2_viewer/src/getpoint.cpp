@@ -147,7 +147,7 @@ public:
     // 设置XYZ三个坐标轴的大小和长度，该值也可以缺省
     // 查看复杂的点云图像会让用户没有方向感，为了让用户保持正确的方向判断，需要显示坐标轴。三个坐标轴X（R，红色）
     // Y（G，绿色）Z（B，蓝色）分别用三种不同颜色的圆柱体代替
-    // visualizer->addCoordinateSystem(1.0);
+    visualizer->addCoordinateSystem(1.0);
     // 通过设置相机参数是用户从默认的角度和方向观察点
     visualizer->initCameraParameters();
     // 设置窗口viewer的背景颜色
@@ -238,6 +238,108 @@ public:
       }
     }
   }
+    void pickedCloud(const cv::Mat &depth, const cv::Mat &color, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr &cloud)
+  {
+    int body_part;
+    const float badPoint = std::numeric_limits<float>::quiet_NaN();
+    #pragma omp parallel for
+    for(int r = 0; r < depth.rows; ++r)
+    {
+      // 创建点云row行，每一行有col列
+      pcl::PointXYZRGBA *itP = &cloud->points[r * depth.cols];
+      // ptr函数访问任意一行像素的首地址　
+      const uint16_t *itD = depth.ptr<uint16_t>(r);
+      const cv::Vec3b *itC = color.ptr<cv::Vec3b>(r);
+      const float y = lookupY.at<float>(0, r);
+      const float *itX = lookupX.ptr<float>();
+
+      for(size_t c = 0; c < (size_t)depth.cols; ++c, ++itP, ++itD, ++itC, ++itX)
+      {
+        bool picked = false;
+          if(int(pick_points[0]) == r && size_t(pick_points[1]) == c)
+        {
+            picked = true;
+            body_part = 0;        
+        }
+          if(int(pick_points[2]) == r && size_t(pick_points[3]) == c)
+        {
+            picked = true;
+            body_part = 1;        
+        }
+          if(int(pick_points[4]) == r && size_t(pick_points[5]) == c)
+        {
+            picked = true;
+            body_part = 2;        
+        }
+        if (picked)
+        {
+          register const float depthValue = *itD / 1000.0f;
+          // Check for invalid measurements
+          if(*itD == 0)
+          {
+            // not valid
+            itP->x = itP->y = itP->z = badPoint;
+            itP->rgba = 0;
+            continue;
+          }
+          itP->z = depthValue;
+          itP->x = *itX * depthValue;
+          itP->y = y * depthValue;
+          itP->b = itC->val[0];
+          itP->g = itC->val[1];
+          itP->r = itC->val[2];
+          itP->a = 255;
+          switch(body_part)
+          {
+          case 0:;
+                Lshoulder(0) = itP->x; Lshoulder(1) = itP->y; Lshoulder(2) = itP->z;
+                break;
+          case 1:
+                Rshoulder(0) = itP->x; Rshoulder(1) = itP->y; Rshoulder(2) = itP->z;
+                break;
+          case 2:
+                Pelv(0) = itP->x; Pelv(1) = itP->y; Pelv(2) = itP->z;
+                break; 
+          }
+        }
+        else
+        {
+            itP->x = itP->y = itP->z = badPoint;
+            itP->rgba = 0;
+            continue;
+        }
+      }
+    }
+  }
+    //叉积
+  Vector3f ThreeCross()
+  {
+    Vector3f a, b,result;
+    a=Lshoulder-Pelv;
+    b=Rshoulder-Pelv;
+    cout<<a<<"  "<<b<<endl;
+    result = a.cross(b);
+    cout<<result<<endl;
+    // Eigen::Vector3d v3(0, 0, 0);
+	  // v3.x() = 1;
+	  // v3[2] = 1;
+	  AngleAxisd angle_axis3(pi *25/ 18, Eigen::Vector3d(1, 0, 0));//1系绕x轴逆时针旋转250得到2系
+    // angle_axis3.matrix().cast<float>()
+	  Vector3f rotated_result = angle_axis3.matrix().cast<float>()*result;
+	  cout << "绕x轴顺时针旋转250°(R12):" << endl << angle_axis3.matrix() << endl;
+	  cout << "旋转后:" << endl << rotated_result.transpose() << endl;
+    return result;
+  }
+  //转换到世界坐标系
+  Vector3f  Transformation(const Vector3f ori)
+  {
+    Vector3f res = ori;
+    // 旋转
+    AngleAxisd angle_axis3(pi *25/ 18, Eigen::Vector3d(1, 0, 0));//1系绕x轴逆时针旋转250得到2系
+ 	  Vector3f rotated_result = angle_axis3.matrix().cast<float>()*result;
+
+
+  }
 };
 
 int main(int argc, char**argv)
@@ -246,4 +348,5 @@ int main(int argc, char**argv)
   std::string depth_path = argv[2]; 
   Posepoint posepoint; 
   posepoint.start(color_path, depth_path);
+  posepoint.ThreeCross();
 }
