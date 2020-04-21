@@ -42,6 +42,7 @@
 #include <Eigen/Geometry>
 using namespace Eigen;
 #define pi 3.14159265359
+
 class Posepoint
 {
 private:
@@ -52,38 +53,81 @@ private:
   pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud;
   pcl::PCDWriter writer;
   bool visualize_stop;
-  double pick_points1[6];
-  double pick_points2[18];
+  double pick_points[24];
+  // double pick_points2[18];
   Vector3f Lshoulder, Rshoulder, Pelv;
-  Vector3f Head,Neck,Thrx,Lhip,Lknee,Lankle,Rhip,Rknee,Rankle;  
+  Vector3f Head,Neck,Thrx,Lhip,Lknee,Lankle,Rhip,Rknee,Rankle;
+  std::string   pic_class, person_class, pic_name, depth_name, color_path, depth_path;
+  int sp;
+  int op;
 public:
-  Posepoint():visualize_stop(false)
+  Posepoint():visualize_stop(false),sp(0),op(0)
   {
     cameraMatrixColor = cv::Mat::zeros(3, 3, CV_64F);
     // cameraMatrixDepth = cv::Mat::zeros(3, 3, CV_64F);
-    static double my_points[6] = {255.67636108398438,292.16888427734375,320.4430236816406,266.26220703125,330.15802001953125,298.64556884765625};
-    static double my_points2[18] = {325.0851135253906, 354.8621826171875, 277.11724853515625, 306.894287109375, 234.90553283691406, 281.9510192871094, 
-313.57281494140625, 276.19488525390625, 317.4102478027344, 326.0814208984375, 244.4990997314453, 274.2761535644531, 213.79966735839844, 239.7393035888672, 213.79966735839844, 235.90187072753906, 
-219.55581665039062, 216.7147216796875};
-    for(int i=0; i<6; i++)
+    // static double my_points[6] = {255.67636108398438,292.16888427734375,320.4430236816406,266.26220703125,330.15802001953125,298.64556884765625};
+    // static double my_points2[18] = {191.4891815185547, 215.0364227294922, 218.52777099609375, 226.16993713378906, 248.7473602294922, 234.1224822998047, 263.0619201660156, 219.8079376220703, 231.25181579589844, 221.3984375, 228.07080078125, 207.08389282226562, 259.88092041015625, 227.7604522705078, 296.4625244140625, 262.7515869140625, 301.23406982421875, 264.34210205078125, 315.548583984375, 283.42816162109375};
+    for (int i=1; i<24; i++)
     {
-      pick_points1[i] = my_points[i];
-    }
-    for(int j=0; j<18; j++)
-    {
-      pick_points2[j] = my_points2[j];
+      // fscanf(fq,"%f\n",&pick_points[i]);//%lf之间应该有逗号，因为没有逗号只能读第一个数。用&是因为要把数存到对应数组元素的地址中去。\n是换行读取
+      // cout<<pick_points[i]<<endl;
+      pick_points[i] = 1;
     }
   }
   ~Posepoint()
   {
   }
 public:
-    void start(std::string color_path, std::string depth_path)
+    void start()
+    {
+      FILE  *fq;
+      fq=fopen("/home/hts/Desktop/kinect_keypoints/a/keypoints.txt" ,"rt+");//"rt+"是打开一个文本文件，可以读写。
+      while(!feof(fq))
+      {
+        if(fscanf(fq,"%lf\n",&pick_points[0])==1)
+        {
+          // cout<<pick_points[0]<<endl;
+            for (int i=1; i<24; i++)
+          {
+            fscanf(fq,"%lf\n",&pick_points[i]);//%lf之间应该有逗号，因为没有逗号只能读第一个数。用&是因为要把数存到对应数组元素的地址中去。\n是换行读取
+            // cout<<pick_points[i]<<endl;
+          }
+          char * a,*b,*c,*d;
+          a= new char [3];
+          b= new char [1];
+          c= new char [14];
+          d = new char [14];
+          fscanf(fq,"%s", a);
+          fscanf(fq,"%s", b);
+          fscanf(fq,"%s", c);
+          pic_class = a;
+          person_class = b;
+          pic_name = c;
+          for(int i=0; i<5;i++)
+          {
+            d[i] =c[i]; 
+          }
+          d[5]='d';d[6]='e';d[7]='p';d[8]='t';d[9]='h';d[10]='.';d[11]='p';d[12]='n';d[13]='g';
+          depth_name = d;
+          // depth_name = depth_name+"depth.png";
+          // depth_name = depth_name.substring(0, depth_name.length() -1);
+          color_path = "/home/hts/Desktop/kinect_pic/"+person_class+'/'+ pic_class+'/'+pic_name;
+          depth_path = "/home/hts/Desktop/kinect_depth/"+person_class+'/'+pic_class+'/'+depth_name;
+          cout<<color_path<<endl;
+          cout<<depth_path<<endl;
+          begin(color_path,depth_path);
+          ThreeCross();
+          cout<<"平躺识别正确："<<sp<<"  平躺识别错误："<<op<<endl;
+        }
+      }
+    }
+    void begin(std::string color_path, std::string depth_path)
   {
     cout<<"开始!"<<endl;
     color = cv::imread(color_path);
     depth = cv::imread(depth_path,2);
     // cv::imshow("color", color);
+    // cout<<"!!!"<<endl;
     // cv::imshow("depth", depth);
     // cv::waitKey(0);
     cloud = pcl::PointCloud<pcl::PointXYZRGBA>::Ptr(new pcl::PointCloud<pcl::PointXYZRGBA>());
@@ -221,59 +265,77 @@ public:
         itP->r = itC->val[2];
         itP->a = 255;
           bool picked = false;
-          if(int(pick_points1[0]) == r && size_t(pick_points1[1]) == c)
+          if(int(pick_points[0]) == c && size_t(pick_points[1]) == r)
         {
-            cout<<"点("<<c<<","<<r<<")选中"<<endl;
+            cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 0;        
         }
-          if(int(pick_points1[2]) == r && size_t(pick_points1[3]) == c)
+          if(int(pick_points[2]) == c && size_t(pick_points[3]) == r)
         {
-            cout<<"点("<<c<<","<<r<<")选中"<<endl;
+            cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 1;        
         }
-          if(int(pick_points1[4]) == r && size_t(pick_points1[5]) == c)
+          if(int(pick_points[4]) == c && size_t(pick_points[5]) == r)
         {
-            cout<<"点("<<c<<","<<r<<")选中"<<endl;
+            cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 2;        
         }
-          if(int(pick_points2[0]) == r && size_t(pick_points2[1]) == c)
+          if(int(pick_points[6]) == c && size_t(pick_points[7]) == r)
         {
-            cout<<"点("<<c<<","<<r<<")选中"<<endl;
+            cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 3;        
         }
-          if(int(pick_points2[2]) == r && size_t(pick_points2[3]) == c)
+          if(int(pick_points[8]) == c && size_t(pick_points[9]) == r)
         {
-            cout<<"点("<<c<<","<<r<<")选中"<<endl;
+            cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 4;        
         }
-          if(int(pick_points2[4]) == r && size_t(pick_points2[5]) == c)
+          if(int(pick_points[10]) == c && size_t(pick_points[11]) == r)
         {
-            cout<<"点("<<c<<","<<r<<")选中"<<endl;
+            cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 5;        
         }
-          if(int(pick_points2[6]) == r && size_t(pick_points2[7]) == c)
+          if(int(pick_points[12]) == c && size_t(pick_points[13]) == r)
         {
-            cout<<"点("<<c<<","<<r<<")选中"<<endl;
+            cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 6;        
         }
-          if(int(pick_points2[8]) == r && size_t(pick_points2[9]) == c)
+          if(int(pick_points[14]) == c && size_t(pick_points[15]) == r)
         {
-            cout<<"点("<<c<<","<<r<<")选中"<<endl;
+            cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 7;        
         }
-          if(int(pick_points2[10]) == r && size_t(pick_points2[11]) == c)
+          if(int(pick_points[16]) == c && size_t(pick_points[17]) == r)
         {
-            cout<<"点("<<c<<","<<r<<")选中"<<endl;
+            cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 8;        
+        }
+          if(int(pick_points[18]) == c && size_t(pick_points[19]) == r)
+        {
+            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            picked = true;
+            body_part = 9;        
+        }
+          if(int(pick_points[20]) == c && size_t(pick_points[21]) == r)
+        {
+            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            picked = true;
+            body_part = 12;        
+        }
+          if(int(pick_points[22]) == c && size_t(pick_points[23]) == r)
+        {
+            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            picked = true;
+            body_part = 13;        
         }
         if (picked)
         {
@@ -281,40 +343,40 @@ public:
           switch(body_part)
           {
           case 0:;
-                Lshoulder(0) = itP->x; Lshoulder(1) = itP->y; Lshoulder(2) = itP->z;
+                Rankle(0) = itP->x; Rankle(1) = itP->y; Rankle(2) = itP->z;
                 break;
           case 1:
-                Rshoulder(0) = itP->x; Rshoulder(1) = itP->y; Rshoulder(2) = itP->z;
-                break;
-          case 2:
-                Pelv(0) = itP->x; Pelv(1) = itP->y; Pelv(2) = itP->z;
-                break;
-          case 3:
-                Head(0) = itP->x; Head(1) = itP->y; Head(2) = itP->z;
-                break; 
-          case 4:
-                Neck(0) = itP->x; Neck(1) = itP->y; Neck(2) = itP->z;
-                break; 
-          case 5:
-                Thrx(0) = itP->x; Thrx(1) = itP->y; Thrx(2) = itP->z;
-                break; 
-          case 6:
-                Lhip(0) = itP->x; Lhip(1) = itP->y; Lhip(2) = itP->z;
-                break; 
-          case 7:
-                Lknee(0) = itP->x; Lknee(1) = itP->y; Lknee(2) = itP->z;
-                break;
-          case 8:
-                Lankle(0) = itP->x; Lankle(1) = itP->y; Lankle(2) = itP->z;
-                break; 
-          case 9:
-                Rhip(0) = itP->x; Rhip(1) = itP->y; Rhip(2) = itP->z;
-                break; 
-          case 10:
                 Rknee(0) = itP->x; Rknee(1) = itP->y; Rknee(2) = itP->z;
                 break;
-          case 11:
-                Rankle(0) = itP->x; Rankle(1) = itP->y; Rankle(2) = itP->z;
+          case 2:
+                Rhip(0) = itP->x; Rhip(1) = itP->y; Rhip(2) = itP->z;
+                break;
+          case 3:
+                Lhip(0) = itP->x; Lhip(1) = itP->y; Lhip(2) = itP->z;
+                break; 
+          case 4:
+                Lknee(0) = itP->x; Lknee(1) = itP->y; Lknee(2) = itP->z;
+                break; 
+          case 5:
+                Lankle(0) = itP->x; Lankle(1) = itP->y; Lankle(2) = itP->z;
+                break; 
+          case 6:
+                Pelv(0) = itP->x; Pelv(1) = itP->y; Pelv(2) = itP->z;
+                break; 
+          case 7:
+                Thrx(0) = itP->x; Thrx(1) = itP->y; Thrx(2) = itP->z;
+                break;
+          case 8:
+                Neck(0) = itP->x; Neck(1) = itP->y; Neck(2) = itP->z;
+                break; 
+          case 9:
+                Head(0) = itP->x; Head(1) = itP->y; Head(2) = itP->z;
+                break; 
+          case 12:
+                Rshoulder(0) = itP->x; Rshoulder(1) = itP->y; Rshoulder(2) = itP->z;
+                break;
+          case 13:
+                Lshoulder(0) = itP->x; Lshoulder(1) = itP->y; Lshoulder(2) = itP->z;
                 break;                              
           }
         }
@@ -325,7 +387,7 @@ public:
   {
     std::ostringstream oss;
     oss.str("");
-    oss << "/home/hts/Desktop/kinect_points/a/aaa/" << std::setfill('0') << std::setw(4);
+    oss << "/home/hts/Desktop/kinect_cloud/a/aaa/" << std::setfill('0') << std::setw(4);
     const std::string baseName = oss.str();
     const std::string cloudName = baseName + "_cloud.pcd";
     OUT_INFO("saving cloud: " << cloudName);
@@ -351,6 +413,7 @@ public:
     Vector3f a, b,result;
     a=Lshoulder-Pelv;
     b=Rshoulder-Pelv;
+    cout<<Lshoulder<<endl;cout<<Rshoulder<<endl;cout<<Pelv<<endl;
     cout<<"左肩向量:\n"<<a<<"   右肩向量:\n"<<b<<endl;
     result = a.cross(b);
     cout<<"躯干法向量:\n"<<result<<endl;
@@ -362,7 +425,15 @@ public:
 	  Vector3f rotated_result = angle_axis3.matrix().cast<float>()*result;
 	  cout << "绕x轴顺时针旋转250°(Rcw):" << endl << angle_axis3.matrix() << endl;
 	  cout << "躯干法向量旋转后:" << endl << rotated_result.transpose() << endl;
-    return result;
+    if (rotated_result(2)>0)
+    {
+      sp+=1;
+    }
+    if (rotated_result(2)<0)
+    {
+      op+=1;
+    }
+    return rotated_result;
   }
   //转换到世界坐标系
   void  Transformation()
@@ -398,12 +469,12 @@ public:
 
 int main(int argc, char**argv)
 {
-  std::string color_path = argv[1];
-  std::string depth_path = argv[2]; 
+  // std::string color_path = argv[1];
+  // std::string depth_path = argv[2]; 
   Posepoint posepoint; 
-  posepoint.start(color_path, depth_path);
-  cout<<"!!";
-  posepoint.ThreeCross();
-  posepoint.Transformation();
-  posepoint.calculate();
+  posepoint.start();
+  // cout<<"!!";
+  // posepoint.ThreeCross();
+  // posepoint.Transformation();
+  // posepoint.calculate();
 }
