@@ -1,5 +1,5 @@
 // -------------------------------------------
-//  @description: 根据彩色图像的像素产生点云代码
+//  @description: 产生骨架的三维点云
 //  @author: hts
 //  @data: 2020-04-11
 //  @version: wpdwp
@@ -296,10 +296,10 @@ public:
     // Eigen::Vector3d v3(0, 0, 0);
 	  // v3.x() = 1;
 	  // v3[2] = 1;
-	  AngleAxisd angle_axis3(pi *11/ 18, Eigen::Vector3d(1, 0, 0));//1系绕y轴逆时针旋转45得到2系
+	  AngleAxisd angle_axis3(pi *25/ 18, Eigen::Vector3d(1, 0, 0));//1系绕x轴逆时针旋转250得到2系
     // angle_axis3.matrix().cast<float>()
-	  Vector3f rotated_result = angle_axis3.matrix().inverse().cast<float>()*result;
-	  cout << "绕y轴顺时针旋转110°(R12):" << endl << angle_axis3.matrix() << endl;//注意和绕x轴z轴不一样
+	  Vector3f rotated_result = angle_axis3.matrix().cast<float>()*result;
+	  cout << "绕x轴顺时针旋转250°(R12):" << endl << angle_axis3.matrix() << endl;
 	  cout << "旋转后:" << endl << rotated_result.transpose() << endl;
     return result;
   }
