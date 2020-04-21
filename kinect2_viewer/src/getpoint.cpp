@@ -1,5 +1,5 @@
 // -------------------------------------------
-//  @description: 根据彩色图像的像素产生点云代码 产生三维骨架点云 计算外积 计算方差 
+//  @description: 根据彩色图像的像素产生点云代码 产生三维骨架点云 计算外积 计算方差 方差保存供svm训练
 //  @author: hts
 //  @data: 2020-04-20
 //  @version: wpdwp
@@ -60,6 +60,7 @@ private:
   std::string   pic_class, person_class, pic_name, depth_name, color_path, depth_path;
   int sp;
   int op;
+  bool right;
 public:
   Posepoint():visualize_stop(false),sp(0),op(0)
   {
@@ -81,7 +82,7 @@ public:
     void start()
     {
       FILE  *fq;
-      fq=fopen("/home/hts/Desktop/kinect_keypoints/a/keypoints.txt" ,"rt+");//"rt+"是打开一个文本文件，可以读写。
+      fq=fopen("/home/hts/Desktop/kinect_keypoints/a/test_keypoints.txt" ,"rt+");//"rt+"是打开一个文本文件，可以读写。
       while(!feof(fq))
       {
         if(fscanf(fq,"%lf\n",&pick_points[0])==1)
@@ -113,17 +114,23 @@ public:
           // depth_name = depth_name.substring(0, depth_name.length() -1);
           color_path = "/home/hts/Desktop/kinect_pic/"+person_class+'/'+ pic_class+'/'+pic_name;
           depth_path = "/home/hts/Desktop/kinect_depth/"+person_class+'/'+pic_class+'/'+depth_name;
-          cout<<color_path<<endl;
-          cout<<depth_path<<endl;
+          // cout<<color_path<<endl;
+          // cout<<depth_path<<endl;
           begin(color_path,depth_path);
-          ThreeCross();
-          cout<<"平躺识别正确："<<sp<<"  平躺识别错误："<<op<<endl;
+          // ThreeCross();
+          Transformation();
+          calculate();
+          // if(!right)
+          // {
+          //   cout<<color_path<<endl;
+          // }
         }
       }
+      // cout<<"爬识别正确："<<sp<<"  爬识别错误："<<op<<endl;
     }
     void begin(std::string color_path, std::string depth_path)
   {
-    cout<<"开始!"<<endl;
+    // cout<<"开始!"<<endl;
     color = cv::imread(color_path);
     depth = cv::imread(depth_path,2);
     // cv::imshow("color", color);
@@ -171,7 +178,7 @@ public:
     const float cx = cameraMatrixColor.at<double>(0, 2);
     const float cy = cameraMatrixColor.at<double>(1, 2);
     float *it;
-    cout<<"相机的内参:"<<fx<<" "<<fy<<" "<<cx<<" "<<cy<<" "<<endl;
+    // cout<<"相机的内参:"<<fx<<" "<<fy<<" "<<cx<<" "<<cy<<" "<<endl;
     lookupY = cv::Mat(1, height, CV_32F);
     it = lookupY.ptr<float>();
     for(size_t r = 0; r < height; ++r, ++it)
@@ -191,7 +198,7 @@ public:
     void cloudViewer()
   {
     cv::Mat color, depth;
-    pcl::visualization::PCLVisualizer::Ptr visualizer(new pcl::visualization::PCLVisualizer("Cloud Viewer"));
+    // pcl::visualization::PCLVisualizer::Ptr visualizer(new pcl::visualization::PCLVisualizer("Cloud Viewer"));
     const std::string cloudName = "rendered";
 
     lock.lock();
@@ -205,31 +212,34 @@ public:
     // 多次调用addPointCloud()可以实现多个点云的叠加，每调用一次就创建一个新的ID号。如果想要更新一个已经
     // 显示的点云，用户必须先调用removePointCloud()，并提供新的ID号。（在PCL1.1版本之后直接调用updatePointCloud()
     //  就可以了，不必手动调用removePointCloud()就可实现点云更新）
-    visualizer->addPointCloud(cloud, cloudName);
-    // 修改现实点云的尺寸。用户可通过该方法控制点云在视窗中的显示方式
-    visualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, cloudName);
-    // 设置XYZ三个坐标轴的大小和长度，该值也可以缺省
-    // 查看复杂的点云图像会让用户没有方向感，为了让用户保持正确的方向判断，需要显示坐标轴。三个坐标轴X（R，红色）
-    // Y（G，绿色）Z（B，蓝色）分别用三种不同颜色的圆柱体代替
-    visualizer->addCoordinateSystem(1.0);
-    // 通过设置相机参数是用户从默认的角度和方向观察点
-    visualizer->initCameraParameters();
-    // 设置窗口viewer的背景颜色
-    visualizer->setBackgroundColor(0, 0, 0);
-    // visualizer->setPosition(mode == BOTH ? color.cols : 0, 0);
-    visualizer->setPosition(0, 0);
-    visualizer->setSize(color.cols, color.rows);
-    visualizer->setShowFPS(true);
-    visualizer->setCameraPosition(0, 0, 0, 0, -1, 0);
-    visualizer->registerKeyboardCallback(&Posepoint::keyboardEvent, *this);
-    saveCloud(cloud);
-    // visualizer->spinOnce(300);
-    while (!visualize_stop) {
-        visualizer->spinOnce(100);
-        // boost::this_thread::sleep(boost::posix_time::microseconds(1000));
-    }
 
-    visualizer->close();
+
+    // visualizer->addPointCloud(cloud, cloudName);
+    // // 修改现实点云的尺寸。用户可通过该方法控制点云在视窗中的显示方式
+    // visualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, cloudName);
+    // // 设置XYZ三个坐标轴的大小和长度，该值也可以缺省
+    // // 查看复杂的点云图像会让用户没有方向感，为了让用户保持正确的方向判断，需要显示坐标轴。三个坐标轴X（R，红色）
+    // // Y（G，绿色）Z（B，蓝色）分别用三种不同颜色的圆柱体代替
+    // visualizer->addCoordinateSystem(1.0);
+    // // 通过设置相机参数是用户从默认的角度和方向观察点
+    // visualizer->initCameraParameters();
+    // // 设置窗口viewer的背景颜色
+    // visualizer->setBackgroundColor(0, 0, 0);
+    // // visualizer->setPosition(mode == BOTH ? color.cols : 0, 0);
+    // visualizer->setPosition(0, 0);
+    // visualizer->setSize(color.cols, color.rows);
+    // visualizer->setShowFPS(true);
+    // visualizer->setCameraPosition(0, 0, 0, 0, -1, 0);
+    // visualizer->registerKeyboardCallback(&Posepoint::keyboardEvent, *this);
+    // saveCloud(cloud);
+    // // visualizer->spinOnce(300);
+    // while (!visualize_stop) {
+    //     visualizer->spinOnce(100);
+    //     // boost::this_thread::sleep(boost::posix_time::microseconds(1000));
+    // }
+
+    // visualizer->close();
+
   }
     void createCloud(const cv::Mat &depth, const cv::Mat &color, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr &cloud)
   {
@@ -265,75 +275,75 @@ public:
         itP->r = itC->val[2];
         itP->a = 255;
           bool picked = false;
-          if(int(pick_points[0]) == c && size_t(pick_points[1]) == r)
+          if(size_t(pick_points[0]) == c && int(pick_points[1]) == r)
         {
-            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            // cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 0;        
         }
-          if(int(pick_points[2]) == c && size_t(pick_points[3]) == r)
+          if(size_t(pick_points[2]) == c && int(pick_points[3]) == r)
         {
-            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            // cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 1;        
         }
-          if(int(pick_points[4]) == c && size_t(pick_points[5]) == r)
+          if(size_t(pick_points[4]) == c && int(pick_points[5]) == r)
         {
-            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            // cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 2;        
         }
-          if(int(pick_points[6]) == c && size_t(pick_points[7]) == r)
+          if(size_t(pick_points[6]) == c && int(pick_points[7]) == r)
         {
-            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            // cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 3;        
         }
-          if(int(pick_points[8]) == c && size_t(pick_points[9]) == r)
+          if(size_t(pick_points[8]) == c && int(pick_points[9]) == r)
         {
-            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            // cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 4;        
         }
-          if(int(pick_points[10]) == c && size_t(pick_points[11]) == r)
+          if(size_t(pick_points[10]) == c && int(pick_points[11]) == r)
         {
-            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            // cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 5;        
         }
-          if(int(pick_points[12]) == c && size_t(pick_points[13]) == r)
+          if(size_t(pick_points[12]) == c && int(pick_points[13]) == r)
         {
-            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            // cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 6;        
         }
-          if(int(pick_points[14]) == c && size_t(pick_points[15]) == r)
+          if(size_t(pick_points[14]) == c && int(pick_points[15]) == r)
         {
-            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            // cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 7;        
         }
-          if(int(pick_points[16]) == c && size_t(pick_points[17]) == r)
+          if(size_t(pick_points[16]) == c && int(pick_points[17]) == r)
         {
-            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            // cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 8;        
         }
-          if(int(pick_points[18]) == c && size_t(pick_points[19]) == r)
+          if(size_t(pick_points[18]) == c && int(pick_points[19]) == r)
         {
-            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            // cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 9;        
         }
-          if(int(pick_points[20]) == c && size_t(pick_points[21]) == r)
+          if(size_t(pick_points[20]) == c && int(pick_points[21]) == r)
         {
-            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            // cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 12;        
         }
-          if(int(pick_points[22]) == c && size_t(pick_points[23]) == r)
+          if(size_t(pick_points[22]) == c && int(pick_points[23]) == r)
         {
-            cout<<"点("<<r<<","<<c<<")选中"<<endl;
+            // cout<<"点("<<r<<","<<c<<")选中"<<endl;
             picked = true;
             body_part = 13;        
         }
@@ -413,25 +423,27 @@ public:
     Vector3f a, b,result;
     a=Lshoulder-Pelv;
     b=Rshoulder-Pelv;
-    cout<<Lshoulder<<endl;cout<<Rshoulder<<endl;cout<<Pelv<<endl;
-    cout<<"左肩向量:\n"<<a<<"   右肩向量:\n"<<b<<endl;
+    // cout<<Lshoulder<<endl;cout<<Rshoulder<<endl;cout<<Pelv<<endl;
+    // cout<<"左肩向量:\n"<<a<<"   右肩向量:\n"<<b<<endl;
     result = a.cross(b);
-    cout<<"躯干法向量:\n"<<result<<endl;
+    // cout<<"躯干法向量:\n"<<result<<endl;
     // Eigen::Vector3d v3(0, 0, 0);
 	  // v3.x() = 1;
 	  // v3[2] = 1;
 	  AngleAxisd angle_axis3(pi *25/ 18, Eigen::Vector3d(1, 0, 0));//1系绕x轴逆时针旋转250得到2系
     // angle_axis3.matrix().cast<float>()
 	  Vector3f rotated_result = angle_axis3.matrix().cast<float>()*result;
-	  cout << "绕x轴顺时针旋转250°(Rcw):" << endl << angle_axis3.matrix() << endl;
-	  cout << "躯干法向量旋转后:" << endl << rotated_result.transpose() << endl;
-    if (rotated_result(2)>0)
-    {
-      sp+=1;
-    }
+	  // cout << "绕x轴顺时针旋转250°(Rcw):" << endl << angle_axis3.matrix() << endl;
+	  // cout << "躯干法向量旋转后:" << endl << rotated_result.transpose() << endl;
     if (rotated_result(2)<0)
     {
+      sp+=1;
+      right = true;
+    }
+    if (rotated_result(2)>0)
+    {
       op+=1;
+      right = false;
     }
     return rotated_result;
   }
@@ -450,18 +462,44 @@ public:
     // 根据旋转向量进行旋转（注意旋转向量包含了旋转轴和旋转了的角度）
     T.rotate(rotation_vector);
     cout<<"旋转后的变换矩阵为：\n"<<T.matrix()<<endl;
-    T.pretranslate(Eigen::Vector3d(0,0,-1)); // 把第四列的平移向量设置为(1,3,4)
+    T.pretranslate(Eigen::Vector3d(0,0,1.35)); // 把第四列的平移向量设置为(1,3,4)
     cout<<"设置平移量后的矩阵为：\n"<<T.matrix()<<endl;
     // result = T*ori;
     Head = T.cast<float>()*Head; Neck = T.cast<float>()*Neck; Thrx = T.cast<float>()*Thrx; Pelv = T.cast<float>()*Pelv; Lhip = T.cast<float>()*Lhip; Lknee = T.cast<float>()*Lknee; Lankle = T.cast<float>()*Lankle; Rhip = T.cast<float>()*Rhip; Rknee = T.cast<float>()*Rknee; Rankle = T.cast<float>()*Rankle; Lshoulder = T.cast<float>()*Lshoulder; Rshoulder = T.cast<float>()*Rshoulder;
+    cout<<Head<<endl;
+    cout<<Neck<<endl;
+    cout<<Thrx<<endl;
+    cout<<Pelv<<endl;
+    cout<<Lhip<<endl;
+    cout<<Lknee<<endl;
+    cout<<Lankle<<endl;
+    cout<<Rhip<<endl;
+    cout<<Rknee<<endl;
+    cout<<Rankle<<endl;
   }
   double calculate()
   {
     double sum =0;
-    sum = Head(2) + Neck(2) + Thrx(2) + Pelv(2) + Lhip(2) + Lknee(2) + Lankle(2) + Rhip(2) + Rknee(2) + Rankle(2);
+    sum = Head(2) + Neck(2) + Thrx(2) + Pelv(2) + Lhip(2) + Rhip(2)+Rshoulder(2)+Lshoulder(2);
+    cout<<"和"<<sum<<endl;
     double mean = sum/10;
-    double stdvar = sqrt(((Head(2)-mean)*(Head(2)-mean)+(Neck(2)-mean)*(Neck(2)-mean)+(Thrx(2)-mean)*(Thrx(2)-mean)+(Pelv(2)-mean)*(Pelv(2)-mean)+(Lhip(2)-mean)*(Lhip(2)-mean)+(Lknee(2)-mean)*(Lknee(2)-mean)+(Lankle(2)-mean)*(Lankle(2)-mean)+(Rhip(2)-mean)*(Rhip(2)-mean)+(Rknee(2)-mean)*(Rknee(2)-mean)+(Rankle(2)-mean)*(Rankle(2)-mean))/10);
+    cout<<"均值:"<<mean<<endl;
+    double stdvar = sqrt(((Head(2)-mean)*(Head(2)-mean)+(Neck(2)-mean)*(Neck(2)-mean)+(Thrx(2)-mean)*(Thrx(2)-mean)+(Pelv(2)-mean)*(Pelv(2)-mean)+(Lhip(2)-mean)*(Lhip(2)-mean)+(Rhip(2)-mean)*(Rhip(2)-mean)+(Rshoulder(2)-mean)*(Rshoulder(2)-mean)+(Lshoulder(2)-mean)*(Lshoulder(2)-mean))/10);
     cout<<"标准差为:"<<stdvar<<endl;
+    // if(stdvar<0.2)
+    // {
+    //   right = true;
+    //   sp+=1;
+    // }
+    // else
+    // {
+    //   right =false;
+    //   op+=1;
+    // }
+    FILE *fp = NULL;
+    fp = fopen("/home/hts/catkin_ws/var.txt", "a+");
+    fprintf(fp, "%lf\n%lf\n", mean,stdvar);
+    fclose(fp);
     return stdvar;
   }
 
