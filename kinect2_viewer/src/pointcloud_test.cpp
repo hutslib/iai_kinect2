@@ -46,21 +46,29 @@ using namespace Eigen;
 class Posepoint
 {
 private:
+<<<<<<< HEAD
   Vector3f Lshoulder;  Rshoulder;
+=======
+  Vector3f Lshoulder;  
+>>>>>>> bf098970da7740d67d5ecd1096e028063969b0d4
 public:
 void test()
 {
   Lshoulder(0) = 1;
+<<<<<<< HEAD
   Lshoulder(1) = 2;
   Lshoulder(2) = 3;
   Rshoulder(0) = 4;
   Rshoulder(1) = 5;
   Rshoulder(2) = 6;
 
+=======
+>>>>>>> bf098970da7740d67d5ecd1096e028063969b0d4
 }
 };
 int main(int argc, char**argv)
 {
+<<<<<<< HEAD
     // // Vector3f result;
     // // result<<1,11,11;
     // // Vector3f a, b,result;
@@ -76,4 +84,21 @@ int main(int argc, char**argv)
 	  // Vector3f rotated_result = angle_axis3.matrix().cast<float>()*result;
 	  // cout << "绕y轴逆时针旋转45°(R12):" << endl << angle_axis3.matrix() << endl;//注意和绕x轴z轴不一样
 	  // cout << "(1, 0, 1)旋转后:" << endl << rotated_result.transpose() << end
+=======
+    // Vector3f result;
+    // result<<1,11,11;
+    // Vector3f a, b,result;
+    // a=Lshoulder-Pelv;
+    // b=Rshoulder-Pelv;
+    // cout<<a<<"  "<<b<<endl;
+    // result = a.cross(b);
+    // cout<<result<<endl;
+    Eigen::Vector3f result(0, 0, 0);
+	  result.x() = 1;
+	  result[2] = 1;
+	  AngleAxisd angle_axis3(pi / 4, Eigen::Vector3d(0, 1, 0));//1系绕y轴逆时针旋转45得到2系
+	  Vector3f rotated_result = angle_axis3.matrix().cast<float>()*result;
+	  cout << "绕y轴逆时针旋转45°(R12):" << endl << angle_axis3.matrix() << endl;//注意和绕x轴z轴不一样
+	  cout << "(1, 0, 1)旋转后:" << endl << rotated_result.transpose() << endl;
+>>>>>>> bf098970da7740d67d5ecd1096e028063969b0d4
 }
